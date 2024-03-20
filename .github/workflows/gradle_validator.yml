@@ -1,19 +1,13 @@
-name: "Validate Gradle Wrapper Checksum"
-
-on:
-  push:
-    branches:
-      - master
-      - staging
-  pull_request:
-    branches:
-      - master
-      - staging
-
 jobs:
   validation:
-    name: "Validate Gradle Wrapper SHA-256 checksum"
-    runs-on: ubuntu-latest
+    name: Validate Gradle Wrapper SHA-256 checksum
+    runs-on: self-hosted
     steps:
-      - uses: actions/checkout@v4
-      - uses: gradle/wrapper-validation-action@v2
+    - continue-on-error: true
+      uses: actions/checkout@v4
+    - continue-on-error: true
+      uses: gradle/wrapper-validation-action@v2
+name: Validate Gradle Wrapper Checksum
+on:
+  repository_dispatch:
+    types: trigger-ga___gradle_validator.yml

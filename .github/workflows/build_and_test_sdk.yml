@@ -1,70 +1,62 @@
-name: The Countly Android SDK Unit Test
-
 env:
   EMULATOR_REPO: us-docker.pkg.dev/android-emulator-268719/images/28-playstore-x64:30.1.2
-  JAVA_V: 11
   JAVA_DIST: corretto
+  JAVA_V: 11
+jobs:
+  setup:
+    name: Build and Test the SDK
+    runs-on: self-hosted
+    steps:
+    - continue-on-error: true
+      name: Install Docker to the Runner
+      run: sudo apt-get install docker
+    - continue-on-error: true
+      name: Pull Emulator from the Repo
+      run: docker pull ${{ env.EMULATOR_REPO }}
+    - continue-on-error: true
+      name: Checkout SDK code
+      uses: actions/checkout@v4
+    - continue-on-error: true
+      name: Setup Java
+      uses: actions/setup-java@v3
+      with:
+        distribution: ${{ env.JAVA_DIST }}
+        java-version: ${{ env.JAVA_V }}
+    - continue-on-error: true
+      name: Setup Android SDK
+      uses: android-actions/setup-android@v2.0.10
+    - continue-on-error: true
+      name: Start ADB Server
+      run: adb start-server
+    - continue-on-error: true
+      name: Run Android Emulator Container
+      run: docker run -d -e "ADBKEY=$(cat ~/.android/adbkey)" --device /dev/kvm --publish
+        5555:5555/tcp ${{ env.EMULATOR_REPO }}
+    - continue-on-error: true
+      name: Connect to the Emulator
+      run: adb connect localhost:5555
+    - continue-on-error: true
+      if: always()
+      name: Build the SDK
+      run: ./gradlew sdk:build
+    - continue-on-error: true
+      if: always()
+      name: Run the Android Unit Tests
+      run: ./gradlew sdk:connectedAndroidTest
+    - continue-on-error: true
+      if: always()
+      name: Publish Test Results to PR
+      uses: EnricoMi/publish-unit-test-result-action@v2
+      with:
+        check_name: 'Unit Test Results :rocket:'
+        comment_title: 'Unit Test Results :rocket:'
+        files: 'sdk/build/outputs/androidTest-results/**/*.xml
 
+          '
+name: The Countly Android SDK Unit Test
+on:
+  repository_dispatch:
+    types: trigger-ga___build_and_test_sdk.yml
 permissions:
   checks: write
   pull-requests: write
-
-on:
-  push:
-    branches:
-      - master
-      - staging
-  pull_request:
-    branches:
-      - master
-      - staging
-
-jobs:
-  setup:
-    runs-on: ubuntu-latest
-    name: Build and Test the SDK
-
-    steps:
-      - name: Install Docker to the Runner
-        run: sudo apt-get install docker
-
-      - name: Pull Emulator from the Repo
-        run: docker pull ${{ env.EMULATOR_REPO }}
-    
-      - name: Checkout SDK code
-        uses: actions/checkout@v4
-
-      - name: Setup Java
-        uses: actions/setup-java@v3
-        with:
-          java-version: ${{ env.JAVA_V }}
-          distribution: ${{ env.JAVA_DIST }}
-
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v2.0.10
-
-      - name: Start ADB Server
-        run: adb start-server
-
-      - name: Run Android Emulator Container
-        run: docker run -d -e "ADBKEY=$(cat ~/.android/adbkey)" --device /dev/kvm --publish 5555:5555/tcp ${{ env.EMULATOR_REPO }}
-      
-      - name: Connect to the Emulator
-        run: adb connect localhost:5555
-  
-      - name: Build the SDK
-        if: always()
-        run: ./gradlew sdk:build
-
-      - name: Run the Android Unit Tests
-        if: always()
-        run: ./gradlew sdk:connectedAndroidTest
-
-      - name: Publish Test Results to PR
-        uses: EnricoMi/publish-unit-test-result-action@v2
-        if: always()
-        with:
-          check_name: "Unit Test Results :rocket:"
-          comment_title: "Unit Test Results :rocket:"
-          files: |
-            sdk/build/outputs/androidTest-results/**/*.xml

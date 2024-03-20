@@ -1,39 +1,40 @@
-name: Release Notice
-on:
-  release:
-    types: [published]
-  workflow_dispatch:
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
-      # To check the github context
-      - name: Dump Github context
-        env:
-          GITHUB_CONTEXT: ${{ toJSON(github) }}
-        run: echo "$GITHUB_CONTEXT"
-      - name: Send custom JSON data to Slack workflow
-        id: slack
-        uses: slackapi/slack-github-action@v1.23.0
-        with:
-          # This data can be any valid JSON from a previous step in the GitHub Action
-          payload: |
-            {
-              "repository": "${{ github.repository }}",
-              "tag_name": "${{ github.event.release.tag_name }}",
-              "actor": "${{ github.actor }}",
-              "body": ${{ toJSON(github.event.release.body) }},
-              "html_url": "${{ github.event.release.html_url }}"
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_RELEASE }}
-      - name: Send custom JSON data to Discord
-        uses: sarisia/actions-status-discord@v1.13.0
-        with:
-          webhook: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          nodetail: true
-          title: New ${{ github.repository }} version ${{ github.event.release.tag_name }} published by ${{ github.actor }}
-          description: |
-            Release URL: ${{ github.event.release.html_url }}
-            Click [here](https://github.com/Countly/countly-server/blob/master/CHANGELOG.md) to view the change log.
-            `${{ github.event.release.body }}`
+    - continue-on-error: true
+      env:
+        GITHUB_CONTEXT: ${{ toJSON(github) }}
+      name: Dump Github context
+      run: echo "$GITHUB_CONTEXT"
+    - continue-on-error: true
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_RELEASE }}
+      id: slack
+      name: Send custom JSON data to Slack workflow
+      uses: slackapi/slack-github-action@v1.23.0
+      with:
+        payload: "{\n  \"repository\": \"${{ github.repository }}\",\n  \"tag_name\"\
+          : \"${{ github.event.release.tag_name }}\",\n  \"actor\": \"${{ github.actor\
+          \ }}\",\n  \"body\": ${{ toJSON(github.event.release.body) }},\n  \"html_url\"\
+          : \"${{ github.event.release.html_url }}\"\n}\n"
+    - continue-on-error: true
+      name: Send custom JSON data to Discord
+      uses: sarisia/actions-status-discord@v1.13.0
+      with:
+        description: 'Release URL: ${{ github.event.release.html_url }}
+
+          Click [here](https://github.com/Countly/countly-server/blob/master/CHANGELOG.md)
+          to view the change log.
+
+          `${{ github.event.release.body }}`
+
+          '
+        nodetail: true
+        title: New ${{ github.repository }} version ${{ github.event.release.tag_name
+          }} published by ${{ github.actor }}
+        webhook: ${{ secrets.DISCORD_WEBHOOK_URL }}
+name: Release Notice
+on:
+  repository_dispatch:
+    types: trigger-ga___release_notice.yml
